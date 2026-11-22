@@ -13,7 +13,7 @@ from pathlib import Path
 from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
 
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-3.8-flash"
 VOICE = "ja-JP-NanamiNeural"
 MAX_HISTORY = 30
 PRIVATE_BGM_DIR = Path(os.environ.get("PRIVATE_BGM_DIR", "/tmp/private-bgm"))
