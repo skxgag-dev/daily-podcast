@@ -36,7 +36,6 @@ jobs:
           cp assets/radiologo.jpg "out/${RADIO_SECRET}/radiologo.jpg"
 
       - name: Checkout private BGM repository
-        if: ${{ secrets.PRIVATE_REPO_TOKEN != '' }}
         uses: actions/checkout@v4
         with:
           repository: skxgag-dev/daily-podcast-PRIVATE
