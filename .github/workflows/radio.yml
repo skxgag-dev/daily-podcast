@@ -2,43 +2,65 @@ name: Daily AI Radio
 
 on:
   schedule:
-    - cron: "0 21 * * *"  # JST 06:00 = UTC 21:00（前日）
+    # 毎日 06:00 JST (21:00 UTC)
+    - cron: "0 21 * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  build-and-deploy:
+  build-and-publish:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install google-genai edge-tts mutagen
+          python -m pip install --upgrade pip
+          pip install edge-tts mutagen
 
-      - name: Generate radio episode and RSS feed
+      - name: Copy cover image
+        env:
+          RADIO_SECRET: ${{ secrets.RADIO_SECRET }}
+        run: |
+          set -euo pipefail
+          test -f assets/radiologo.jpg
+          mkdir -p "out/${RADIO_SECRET}"
+          cp assets/radiologo.jpg "out/${RADIO_SECRET}/radiologo.jpg"
+
+      - name: Generate radio episode and RSS
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           RADIO_SECRET: ${{ secrets.RADIO_SECRET }}
           PAGES_BASE_URL: ${{ secrets.PAGES_BASE_URL }}
           LOCAL_CONTEXT: ${{ secrets.LOCAL_CONTEXT }}
-          GEMINI_MODEL: "gemini-3.8-flash"
         run: |
+          set -euo pipefail
           python scripts/generate_radio.py
 
-      - name: Deploy to GitHub Pages
+      - name: Secret leak check on output
+        run: |
+          set -euo pipefail
+          if [ -n "${RADIO_SECRET:-}" ] && grep -rnF -- "$RADIO_SECRET" out/ 2>/dev/null; then
+            echo "ERROR: Secret token found in generated output"
+            exit 1
+          fi
+          if [ -n "${LOCAL_CONTEXT:-}" ] && grep -rnF -- "$LOCAL_CONTEXT" out/ 2>/dev/null; then
+            echo "ERROR: LOCAL_CONTEXT found in generated output"
+            exit 1
+          fi
+
+      - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
+          publish_dir: ./out
           keep_files: true
+          destination_dir: .
