@@ -65,6 +65,10 @@ def call_gemini(api_key: str, model: str, prompt: str) -> dict:
                 body = json.loads(resp.read().decode("utf-8"))
             text = body["candidates"][0]["content"]["parts"][0]["text"]
             return json.loads(text)
+        except urllib.error.HTTPError as exc:
+            print(f"Gemini HTTPError: {exc.code} {exc.reason}", file=sys.stderr)
+            last_err = exc
+            time.sleep(2 * attempt)
         except (urllib.error.URLError, KeyError, IndexError, json.JSONDecodeError, TimeoutError) as exc:
             last_err = exc
             time.sleep(2 * attempt)
