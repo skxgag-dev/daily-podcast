@@ -32,7 +32,7 @@ jobs:
           RADIO_SECRET: ${{ secrets.RADIO_SECRET }}
           PAGES_BASE_URL: ${{ secrets.PAGES_BASE_URL }}
           LOCAL_CONTEXT: ${{ secrets.LOCAL_CONTEXT }}
-          GEMINI_MODEL: "gemini-2.5-flash"
+          GEMINI_MODEL: "gemini-3.8-flash"
         run: |
           python scripts/generate_radio.py
 
