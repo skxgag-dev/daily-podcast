@@ -40,7 +40,7 @@ jobs:
         with:
           repository: skxgag-dev/daily-podcast-PRIVATE
           token: ${{ secrets.PRIVATE_REPO_TOKEN }}
-          path: /tmp/private-bgm
+          path: private-bgm
 
       - name: Generate radio episode and RSS
         env:
@@ -48,7 +48,7 @@ jobs:
           RADIO_SECRET: ${{ secrets.RADIO_SECRET }}
           PAGES_BASE_URL: ${{ secrets.PAGES_BASE_URL }}
           LOCAL_CONTEXT: ${{ secrets.LOCAL_CONTEXT }}
-          PRIVATE_BGM_DIR: /tmp/private-bgm
+          PRIVATE_BGM_DIR: private-bgm
         run: |
           set -euo pipefail
           python scripts/generate_radio.py
@@ -72,4 +72,4 @@ jobs:
       - name: Clean up private BGM checkout
         if: always()
         run: |
-          rm -rf /tmp/private-bgm
+          rm -rf private-bgm
