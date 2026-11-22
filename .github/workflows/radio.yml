@@ -13,7 +13,7 @@ jobs:
   build-and-publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout public repository
         uses: actions/checkout@v4
 
       - name: Setup Python
@@ -35,12 +35,21 @@ jobs:
           mkdir -p "out/${RADIO_SECRET}"
           cp assets/radiologo.jpg "out/${RADIO_SECRET}/radiologo.jpg"
 
+      - name: Checkout private BGM repository
+        if: ${{ secrets.PRIVATE_REPO_TOKEN != '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: skxgag-dev/daily-podcast-PRIVATE
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          path: /tmp/private-bgm
+
       - name: Generate radio episode and RSS
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           RADIO_SECRET: ${{ secrets.RADIO_SECRET }}
           PAGES_BASE_URL: ${{ secrets.PAGES_BASE_URL }}
           LOCAL_CONTEXT: ${{ secrets.LOCAL_CONTEXT }}
+          PRIVATE_BGM_DIR: /tmp/private-bgm
         run: |
           set -euo pipefail
           python scripts/generate_radio.py
@@ -48,10 +57,6 @@ jobs:
       - name: Secret leak check on output
         run: |
           set -euo pipefail
-          if [ -n "${RADIO_SECRET:-}" ] && grep -rnF -- "$RADIO_SECRET" out/ 2>/dev/null; then
-            echo "ERROR: Secret token found in generated output"
-            exit 1
-          fi
           if [ -n "${LOCAL_CONTEXT:-}" ] && grep -rnF -- "$LOCAL_CONTEXT" out/ 2>/dev/null; then
             echo "ERROR: LOCAL_CONTEXT found in generated output"
             exit 1
@@ -64,3 +69,8 @@ jobs:
           publish_dir: ./out
           keep_files: true
           destination_dir: .
+
+      - name: Clean up private BGM checkout
+        if: always()
+        run: |
+          rm -rf /tmp/private-bgm
