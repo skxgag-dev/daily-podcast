@@ -1,0 +1,147 @@
+name: Daily AI Radio
+
+on:
+  schedule:
+    # 毎時7分に起動する（ちょうどの時刻は混み合って遅れやすいため7分ずらす）。
+    # 実際に番組を作るのは、設定 RADIO_PUBLISH_HOURS の配信時刻の回だけ。
+    # 起動が遅れたり飛んだりしても、次の起動で未配信の回を自動で作る。
+    - cron: "7 * * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "今すぐ1本作る（配信時刻の判定を無視する）"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+# 手動実行と定時実行が重なっても、公開処理が同時に走らないようにする
+concurrency:
+  group: daily-ai-radio
+  cancel-in-progress: false
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # 設定画面（Settings > Secrets and variables > Actions > Variables）の値。未設定なら初期値が使われる
+    env:
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+      RADIO_PUBLISH_HOURS: ${{ vars.RADIO_PUBLISH_HOURS }}
+      RADIO_KEEP_EPISODES: ${{ vars.RADIO_KEEP_EPISODES }}
+      RADIO_NEWS_PER_TOWN: ${{ vars.RADIO_NEWS_PER_TOWN }}
+      RADIO_NEWS_LINE_MAX_CHARS: ${{ vars.RADIO_NEWS_LINE_MAX_CHARS }}
+      RADIO_MAX_TOTAL_CHARS: ${{ vars.RADIO_MAX_TOTAL_CHARS }}
+      RADIO_CHANGE_TEMP_DEGREES: ${{ vars.RADIO_CHANGE_TEMP_DEGREES }}
+      RADIO_CHANGE_PROB_POINTS: ${{ vars.RADIO_CHANGE_PROB_POINTS }}
+      RADIO_CHANGE_RAIN_HOURS: ${{ vars.RADIO_CHANGE_RAIN_HOURS }}
+      RADIO_RAIN_LOOKAHEAD_HOURS: ${{ vars.RADIO_RAIN_LOOKAHEAD_HOURS }}
+      RADIO_WIND_MENTION_MS: ${{ vars.RADIO_WIND_MENTION_MS }}
+      RADIO_MENTION_WAVE: ${{ vars.RADIO_MENTION_WAVE }}
+      RADIO_MENTION_SUN: ${{ vars.RADIO_MENTION_SUN }}
+      RADIO_MENTION_UV: ${{ vars.RADIO_MENTION_UV }}
+      RADIO_FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force && '1' || '0' }}
+    steps:
+      - name: Checkout public repository
+        uses: actions/checkout@v4
+
+      # 公開リポジトリは、60日間更新が無いと定時実行が止まる。
+      # 最後の更新から指定日数（初期値30日）が過ぎたら、印のファイルを1コミットだけ更新して止まるのを防ぐ。
+      - name: Keep scheduled runs alive
+        if: github.ref_name == github.event.repository.default_branch
+        continue-on-error: true
+        env:
+          KEEPALIVE_DAYS: ${{ vars.RADIO_KEEPALIVE_DAYS || '30' }}
+        run: |
+          set -euo pipefail
+          last_commit_epoch="$(git log -1 --format=%ct)"
+          now_epoch="$(date +%s)"
+          age_days="$(( (now_epoch - last_commit_epoch) / 86400 ))"
+          echo "Days since the last commit on the default branch: ${age_days}"
+          if [ "${age_days}" -ge "${KEEPALIVE_DAYS}" ]; then
+            mkdir -p .github
+            date -u +"%Y-%m-%dT%H:%M:%SZ" > .github/keepalive-marker.txt
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .github/keepalive-marker.txt
+            git commit -m "chore: keepalive marker to prevent scheduled workflow suspension"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+      # 今回の起動で番組を作るべきかだけを先に判定する（作らない回は、ここで数秒で終わる）
+      - name: Decide whether to publish
+        id: decide
+        env:
+          RADIO_SECRET: ${{ secrets.RADIO_SECRET }}
+          PAGES_BASE_URL: ${{ secrets.PAGES_BASE_URL }}
+        run: |
+          set -euo pipefail
+          python3 scripts/generate_radio.py --check
+
+      - name: Setup Python
+        if: steps.decide.outputs.run == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        if: steps.decide.outputs.run == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install edge-tts mutagen
+
+      - name: Copy cover image
+        if: steps.decide.outputs.run == 'true'
+        env:
+          RADIO_SECRET: ${{ secrets.RADIO_SECRET }}
+        run: |
+          set -euo pipefail
+          test -f assets/radiologo.jpg
+          mkdir -p "out/${RADIO_SECRET}"
+          cp assets/radiologo.jpg "out/${RADIO_SECRET}/radiologo.jpg"
+
+      - name: Checkout private BGM repository
+        if: steps.decide.outputs.run == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: skxgag-dev/daily-podcast-PRIVATE
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          path: private-bgm
+
+      - name: Install ffmpeg
+        if: steps.decide.outputs.run == 'true'
+        run: |
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+
+      - name: Generate radio episode and RSS
+        id: generate
+        if: steps.decide.outputs.run == 'true'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          RADIO_SECRET: ${{ secrets.RADIO_SECRET }}
+          PAGES_BASE_URL: ${{ secrets.PAGES_BASE_URL }}
+          PRIVATE_BGM_DIR: private-bgm
+        run: |
+          set -euo pipefail
+          python scripts/generate_radio.py
+
+      # force_orphan: 公開ブランチを毎回「最新の1コミットだけ」に作り直す。
+      # out/ に入れたもの（残す数本の音声・RSS・記録・ロゴ）だけが公開され、
+      # 過去の音声はファイルも履歴も残らないため、リポジトリの容量が増えない。
+      # 番組を作らなかった回・生成に失敗した回は、この手順に進まないため公開内容は変わらない。
+      - name: Deploy to gh-pages branch
+        if: steps.decide.outputs.run == 'true' && steps.generate.outputs.published == 'true'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./out
+          force_orphan: true
+
+      - name: Clean up private BGM checkout
+        if: always() && steps.decide.outputs.run == 'true'
+        run: |
+          rm -rf private-bgm
