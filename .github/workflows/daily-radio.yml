@@ -2,10 +2,13 @@ name: Daily AI Radio
 
 on:
   schedule:
-    # 毎時7分に起動する（ちょうどの時刻は混み合って遅れやすいため7分ずらす）。
+    # 毎時7分と37分に起動する（ちょうどの時刻は混み合って遅れやすいため7分ずらす）。
+    # GitHubの定期実行は間引かれたり遅れたりするため、同じ時間に2回起動して取りこぼしを減らす。
     # 実際に番組を作るのは、設定 RADIO_PUBLISH_HOURS の配信時刻の回だけ。
+    # 配信済みの回は判定ステップで数秒のうちに終わるため、回数を増やしても負担は小さい。
     # 起動が遅れたり飛んだりしても、次の起動で未配信の回を自動で作る。
     - cron: "7 * * * *"
+    - cron: "37 * * * *"
   workflow_dispatch:
     inputs:
       force:
@@ -42,6 +45,10 @@ jobs:
       RADIO_MENTION_SUN: ${{ vars.RADIO_MENTION_SUN }}
       RADIO_MENTION_UV: ${{ vars.RADIO_MENTION_UV }}
       RADIO_FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force && '1' || '0' }}
+      # 生成ステップの最大試行回数（天気APIなど外部通信の一時的な失敗に備える）
+      GENERATE_MAX_ATTEMPTS: ${{ vars.RADIO_GENERATE_MAX_ATTEMPTS || '3' }}
+      # 生成ステップを再試行するまでの待ち時間（秒）。一時的な通信障害が収まるのを待つ
+      GENERATE_RETRY_WAIT_SEC: ${{ vars.RADIO_GENERATE_RETRY_WAIT_SEC || '90' }}
     steps:
       - name: Checkout public repository
         uses: actions/checkout@v4
@@ -117,6 +124,8 @@ jobs:
             sudo apt-get install -y ffmpeg
           fi
 
+      # 天気APIなど外部通信が一時的に失敗しても、待ってから自動でやり直す。
+      # 生成が途中で失敗した回は公開手順に進まないため、公開内容は変わらない。
       - name: Generate radio episode and RSS
         id: generate
         if: steps.decide.outputs.run == 'true'
@@ -127,7 +136,16 @@ jobs:
           PRIVATE_BGM_DIR: private-bgm
         run: |
           set -euo pipefail
-          python scripts/generate_radio.py
+          attempt=1
+          until python scripts/generate_radio.py; do
+            if [ "${attempt}" -ge "${GENERATE_MAX_ATTEMPTS}" ]; then
+              echo "Generation failed after ${attempt} attempts." >&2
+              exit 1
+            fi
+            echo "Attempt ${attempt} failed; retrying in ${GENERATE_RETRY_WAIT_SEC} seconds." >&2
+            sleep "${GENERATE_RETRY_WAIT_SEC}"
+            attempt=$((attempt + 1))
+          done
 
       # force_orphan: 公開ブランチを毎回「最新の1コミットだけ」に作り直す。
       # out/ に入れたもの（残す数本の音声・RSS・記録・ロゴ）だけが公開され、
