@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+  <channel>
+    <title>MATT RADIO</title>
+    <link>https://skxgag-dev.github.io/daily-podcast/B1cF5hJ0nS8uA2eG4mK9qW6xZ3rTk8M3xQ9pL2vN7wR4tY6z/feed.xml</link>
+    <description>Personal daily AI radio feed</description>
+    <language>ja</language>
+    <itunes:image href="https://skxgag-dev.github.io/daily-podcast/B1cF5hJ0nS8uA2eG4mK9qW6xZ3rTk8M3xQ9pL2vN7wR4tY6z/radiologo.jpg" />
+    <lastBuildDate>Sat, 28 Nov 2026 17:27:57 +0900</lastBuildDate>
+    <item>
+      <title>2026-11-28 夜版 鴨川の天気とニュース</title>
+      <description>鴨川には、濃霧注意報が出ています。昼の予報から、変更はありません。これから6時間は、雨の予報はありません。鴨川のニュースです。鴨川シーワールドの冬のナイトアドベンチャーは12/26〜1/4｜20時から1,800円、予約は12/1の10時から 天気データ: Open-Meteo.com (CC BY 4.0) / 警報・注意報: 気象庁</description>
+      <enclosure url="https://skxgag-dev.github.io/daily-podcast/B1cF5hJ0nS8uA2eG4mK9qW6xZ3rTk8M3xQ9pL2vN7wR4tY6z/episodes/20261128_1727_night.mp3" length="246126" type="audio/mpeg" />
+      <guid isPermaLink="true">https://skxgag-dev.github.io/daily-podcast/B1cF5hJ0nS8uA2eG4mK9qW6xZ3rTk8M3xQ9pL2vN7wR4tY6z/episodes/20261128_1727_night.mp3</guid>
+      <pubDate>Sat, 28 Nov 2026 17:27:57 +0900</pubDate>
+      <itunes:duration>36</itunes:duration>
+    </item>
+    <item>
+      <title>2026-11-28 昼版 鴨川の天気とニュース</title>
+      <description>鴨川には、濃霧注意報が出ています。今日の午後の降水確率は、朝の予報の27パーセントから63パーセントに上がりました。これから6時間は、雨の予報はありません。 天気データ: Open-Meteo.com (CC BY 4.0) / 警報・注意報: 気象庁</description>
+      <enclosure url="https://skxgag-dev.github.io/daily-podcast/B1cF5hJ0nS8uA2eG4mK9qW6xZ3rTk8M3xQ9pL2vN7wR4tY6z/episodes/20261128_1252_noon.mp3" length="179964" type="audio/mpeg" />
+      <guid isPermaLink="true">https://skxgag-dev.github.io/daily-podcast/B1cF5hJ0nS8uA2eG4mK9qW6xZ3rTk8M3xQ9pL2vN7wR4tY6z/episodes/20261128_1252_noon.mp3</guid>
+      <pubDate>Sat, 28 Nov 2026 12:52:01 +0900</pubDate>
+      <itunes:duration>26</itunes:duration>
+    </item>
+    <item>
+      <title>2026-11-28 朝版 鴨川の天気とニュース</title>
+      <description>鴨川には、濃霧注意報が出ています。今日の午前は強い雨です。気温は15度から19度、降水確率は100パーセントです。風が強く、最大8メートルの予報です。今日の午後は快晴です。気温は17度から20度、降水確率は27パーセントです。風が強く、最大 天気データ: Open-Meteo.com (CC BY 4.0) / 警報・注意報: 気象庁</description>
+      <enclosure url="https://skxgag-dev.github.io/daily-podcast/B1cF5hJ0nS8uA2eG4mK9qW6xZ3rTk8M3xQ9pL2vN7wR4tY6z/episodes/20261128_0608_morning.mp3" length="597982" type="audio/mpeg" />
+      <guid isPermaLink="true">https://skxgag-dev.github.io/daily-podcast/B1cF5hJ0nS8uA2eG4mK9qW6xZ3rTk8M3xQ9pL2vN7wR4tY6z/episodes/20261128_0608_morning.mp3</guid>
+      <pubDate>Sat, 28 Nov 2026 06:08:34 +0900</pubDate>
+      <itunes:duration>86</itunes:duration>
+    </item>
+  </channel>
+</rss>
